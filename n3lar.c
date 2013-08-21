@@ -320,6 +320,9 @@ int convert_and_render(uint8_t* pixels, int nrows, int ncols, int ldim)
 				for(j=0; j<CHARW; ++j)
 					pixels[(r+i)*ldim+(c+j)] = glyph[i*CHARW+j];
 		}
+	
+	//
+	return 1;
 }
 
 /*
