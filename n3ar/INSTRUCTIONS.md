@@ -7,7 +7,7 @@ This is a simple implementation of an ASCII art render developed in my spare tim
 To compile and run the program, you will need:
 
 * a C compiler
-* *nix OS with ncurses library
+* *nix OS with `ncurses`
 * OpenCV library, <http://opencv.org/>
 
 The program can be compiled on *nix machines by using the provided makefile (some small modifications are usually required).
