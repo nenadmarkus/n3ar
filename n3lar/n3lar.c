@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <math.h>
 
 #include <cv.h>
 #include <highgui.h>
@@ -368,7 +367,7 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 	frame = cvRetrieveFrame(videostream, CV_LOAD_IMAGE_GRAYSCALE);
 	
 	if(!frame)
-		return NULL;
+		return 0;
 	
 	// convert to grayscale
 	if(!gray)
@@ -470,7 +469,7 @@ int main()
 	};
 
 	//
-	if(!initialize_video_stream(NULL))
+	if(!initialize_video_stream(0))
 	{
 		printf("Cannot initialize camera stream!\n");
 
