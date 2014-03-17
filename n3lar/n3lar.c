@@ -17,7 +17,7 @@ void RCLAHEM(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int 
 
 	int i, j, k;
 	int nrows, ncols;
-	
+
 	//
 	nrows = i1 - i0 + 1;
 	ncols = j1 - j0 + 1;
@@ -34,7 +34,7 @@ void RCLAHEM(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int 
 
 			p[k] = p[k] + 1.0/(nrows*ncols);
 		}
-		
+
 	// clip the histogram (ideally, we should do a few iterations of this)
 	for(k=0; k<NBINS; ++k)
 	{
@@ -42,10 +42,10 @@ void RCLAHEM(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int 
 		{
 			//
 			double d;
-		
+
 			//
 			d = p[k] - (double)s/NBINS;
-		
+
 			//
 			p[k] = (double)s/NBINS;
 			
@@ -59,7 +59,7 @@ void RCLAHEM(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int 
 	P[0] = p[0];
 	for(i=1; i<NBINS; ++i)
 		P[i] = P[i-1] + p[i];
-	
+
 	// compute intensity map
 	for(k=0; k<NBINS; ++k)
 		imap[k] = (NBINS-1)*P[k];
@@ -70,20 +70,20 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 	//
 	#define MAXDIVS 16
 	uint8_t imaps[MAXDIVS][MAXDIVS][NBINS];
-	
+
 	int ics[MAXDIVS], jcs[MAXDIVS];
-	
+
 	int i, j, k, l, i0, j0, i1, j1, I, J;
-	
+
 	uint8_t v00, v01, v10, v11;
-	
+
 	//
 	i0 = 0;
 	j0 = 0;
-	
+
 	I = nrows;
 	J = ncols;
-	
+
 	for(i=0; i<di; ++i)
 	{
 		for(j=0; j<dj; ++j)
@@ -91,44 +91,44 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 			//
 			i0 = i*I/di;
 			j0 = j*J/dj;
-			
+
 			i1 = (i+1)*I/di;
 			j1 = (j+1)*J/dj;
-			
+
 			if(i1>=I)
 				i1 = I - 1;
-				
+	
 			if(j1 >= J)
 				j1 = J - 1;
-			
+
 			//
 			RCLAHEM(imaps[i][j], in, i0, j0, i1, j1, ldim, s);
-			
+
 			//
 			ics[i] = (i0 + i1)/2;
 			jcs[j] = (j0 + j1)/2;
 		}
 	}
-		
+
 	// SPECIAL CASE: image corners
 	for(i=0; i<ics[0]; ++i)
 	{
 		for(j=0; j<jcs[0]; ++j)
 			out[i*ldim + j] = imaps[0][0][ in[i*ldim + j] ];
-	
+
 		for(j=jcs[dj-1]; j<J; ++j)
 			out[i*ldim + j] = imaps[0][dj-1][ in[i*ldim + j] ];
 	}
-	
+
 	for(i=ics[di-1]; i<I; ++i)
 	{
 		for(j=0; j<jcs[0]; ++j)
 			out[i*ldim + j] = imaps[di-1][0][ in[i*ldim + j] ];
-		
+
 		for(j=jcs[dj-1]; j<J; ++j)	
 			out[i*ldim + j] = imaps[di-1][dj-1][ in[i*ldim + j] ];
 	}
-		
+
 	// SPECIAL CASE: image boundaries
 	for(k=0; k<di-1; ++k)
 	{
@@ -138,20 +138,20 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 			{
 				v00 = imaps[k+0][0][ in[i*ldim + j] ];
 				v10 = imaps[k+1][0][ in[i*ldim + j] ];
-				
+
 				out[i*ldim + j] = ( (ics[k+1]-i)*v00 + (i-ics[k])*v10 )/(ics[k+1] - ics[k]);
 			}
-			
+
 			for(j=jcs[dj-1]; j<J; ++j)
 			{
 				v01 = imaps[k+0][dj-1][ in[i*ldim + j] ];
 				v11 = imaps[k+1][dj-1][ in[i*ldim + j] ];
-				
+
 				out[i*ldim + j] = ( (ics[k+1]-i)*v01 + (i-ics[k])*v11 )/(ics[k+1] - ics[k]);
 			}
 		}
 	}
-	
+
 	for(k=0; k<dj-1; ++k)
 		for(j=jcs[k]; j<jcs[k+1]; ++j)
 		{
@@ -159,19 +159,19 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 			{
 				v00 = imaps[0][k+0][ in[i*ldim + j] ];
 				v01 = imaps[0][k+1][ in[i*ldim + j] ];
-				
+
 				out[i*ldim + j] = ( (jcs[k+1]-j)*v00 + (j-jcs[k])*v01 )/(jcs[k+1] - jcs[k]);
 			}
-			
+
 			for(i=ics[di-1]; i<I; ++i)
 			{
 				v10 = imaps[di-1][k+0][ in[i*ldim + j] ];
 				v11 = imaps[di-1][k+1][ in[i*ldim + j] ];
-				
+
 				out[i*ldim + j] = ( (jcs[k+1]-j)*v10 + (j-jcs[k])*v11 )/(jcs[k+1] - jcs[k]);
 			}
 		}
-		
+
 	//
 	for(k=0; k<di-1; ++k)
 		for(l=0; l<dj-1; ++l)
@@ -179,14 +179,14 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 				for(i=ics[k]; i<ics[k+1]; ++i)
 				{
 					uint8_t p;
-					
+
 					p = in[i*ldim + j];
-				
+
 					v00 = imaps[k+0][l+0][p];
 					v01 = imaps[k+0][l+1][p];
 					v10 = imaps[k+1][l+0][p];
 					v11 = imaps[k+1][l+1][p];
-					
+
 					out[i*ldim + j] =
 						(
 							(ics[k+1]-i)*(jcs[l+1]-j)*v00 + (ics[k+1]-i)*(j-jcs[l])*v01 + (i-ics[k])*(jcs[l+1]-j)*v10 + (i-ics[k])*(j-jcs[l])*v11
@@ -367,7 +367,7 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 	frame = cvRetrieveFrame(videostream, CV_LOAD_IMAGE_GRAYSCALE);
 	
 	if(!frame)
-		return 0;
+		return NULL;
 	
 	// convert to grayscale
 	if(!gray)
