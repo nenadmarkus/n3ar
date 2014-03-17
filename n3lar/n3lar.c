@@ -1,79 +1,9 @@
-/*
-	n3lar - n3n0's learned ASCII art renderer
-	Copyright (c) 2013, Nenad Markus
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-	Contact the author by neno.markus@gmail.com.
-*/
-
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 
 #include <cv.h>
 #include <highgui.h>
-
-//
-static CvCapture* videostream = NULL;
-
-/*
-	
-*/
-
-#define CHARH 8
-#define CHARW 8
-
-static uint8_t fontdata[256][64]=
-#include "fontdata"
-;
-
-/*
-	
-*/
-
-void do_gamma_correction(uint8_t* pixels, int nrows, int ncols, int ldim, float gamma)
-{
-	int r, c, ind;
-
-	#define NLEVELS 4096
-	#define MINGAMMA 0.0f
-	#define MAXGAMMA 30.0f
-
-	static int islutcomputed = 0;
-	static uint8_t lut[NLEVELS][256];
-
-	//
-	if(!islutcomputed)
-	{
-		for(r=0; r<NLEVELS; ++r)
-			for(c=0; c<256; ++c)
-				lut[r][c] = (uint8_t)( 255.0f*pow(c/255.0f, r*(MAXGAMMA-MINGAMMA)/NLEVELS) );
-
-		islutcomputed = 1;
-	}
-	
-	//
-	gamma = MIN(MAX(gamma, MINGAMMA), MAXGAMMA);
-
-	ind = (int)( gamma/((MAXGAMMA-MINGAMMA)/NLEVELS) );
-
-	//
-	for(r=0; r<nrows; ++r)
-		for(c=0; c<ncols; ++c)
-			pixels[r*ldim+c] = lut[ind][pixels[r*ldim+c]];
-}
 
 /*
 	
@@ -266,19 +196,58 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 }
 
 /*
+	rendering structures
+*/
+
+//
+int glyphnum = 0;
+uint8_t glyphs[1024][15*15];
+
+int glyphnrows = 0;
+int glyphncols = 0;
+
+//
+int32_t* tree = 0;
+
+//
+int unpack_rendering_structures(uint8_t pack[])
+{
+	int i, j, k;
+
+	//
+	glyphnum = *(int*)&pack[0*sizeof(int)];
+
+	glyphnrows = *(int*)&pack[1*sizeof(int)];
+	glyphncols = *(int*)&pack[2*sizeof(int)];
+
+	k = 3*sizeof(int);
+
+	for(i=0; i<glyphnum; ++i)
+		for(j=0; j<glyphnrows*glyphncols; ++j)
+		{
+			glyphs[i][j] = pack[k];
+
+			++k;
+		}
+
+	//
+	tree = (int32_t*)&pack[k];
+}
+
+/*
 	
 */
 
 #define BINTEST(r, c, t, pixels, ldim) ( (pixels)[(r)*(ldim)+(c)] > (t) )
 
-int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
+int get_tree_output(uint8_t* pixels, int ldim)
 {
 	int nodeidx;
 	uint8_t* n;
-	
+
 	//
 	nodeidx = 0;
-	n = (uint8_t*)&tree[0];
+	n = (uint8_t*)&tree[1];
 	
 	while(n[0] == 1) // while we are at a nonterminal node
 	{
@@ -289,45 +258,82 @@ int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
 			nodeidx = 2*nodeidx+2;
 		
 		//
-		n = (uint8_t*)&tree[nodeidx];
+		n = (uint8_t*)&tree[1+nodeidx];
 	}
 	
 	return n[1];
 }
 
-int convert_and_render(uint8_t* pixels, int nrows, int ncols, int ldim)
-{
-	int r, c;
+/*
 	
-	static uint8_t treearray[] = 
-#include "tree.array"
-	;
+*/
+
+void compute_index_matrix(uint8_t indexmatrix[], uint8_t pixels[], int nrows, int ncols, int ldim)
+{
+	int i;
+
+	int r, c;
 
 	//
-	for(r=0; r<nrows; r+=CHARH)
-		for(c=0; c<ncols; c+=CHARW)
+	i = 0;
+
+	for(r=0; r<nrows; r+=glyphnrows)
+	{
+		for(c=0; c<ncols; c+=glyphncols)
 		{
-			int i, j, ind;
-			uint8_t* glyph;
-			
 			//
-			ind = get_tree_output((int32_t*)treearray, &pixels[r*ldim+c], ldim);
-			
+			if(tree)
+				indexmatrix[i] = get_tree_output(&pixels[r*ldim+c], ldim);
+			else
+				indexmatrix[i] = 0;
+
 			//
-			glyph = (uint8_t*)&fontdata[ind][0];
-			
-			for(i=0; i<CHARH; ++i)
-				for(j=0; j<CHARW; ++j)
-					pixels[(r+i)*ldim+(c+j)] = glyph[i*CHARW+j];
+			++i;
 		}
-	
-	//
-	return 1;
+	}
 }
 
 /*
 	
 */
+
+void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
+{
+	static uint8_t indexmatrix[640*480];
+
+	int r, c;
+
+	//
+	compute_index_matrix(indexmatrix, pixels, *nrows, *ncols, ldim);
+
+	//
+	for(r=0; r<*nrows; r+=glyphnrows)
+		for(c=0; c<*ncols; c+=glyphncols)
+		{
+			int i, j, idx;
+			uint8_t* glyph;
+
+			//
+			idx = indexmatrix[(r/glyphnrows)*(*ncols/glyphncols) + (c/glyphncols)];
+
+			//
+			glyph = (uint8_t*)&glyphs[idx][0];
+
+			for(i=0; i<glyphnrows; ++i)
+				for(j=0; j<glyphncols; ++j)
+					pixels[(r+i)*ldim+(c+j)] = glyph[i*glyphncols+j];
+		}
+
+	//
+	*nrows = (*nrows/glyphnrows)*glyphnrows;
+	*ncols = (*ncols/glyphncols)*glyphncols;
+}
+
+/*
+	
+*/
+
+static CvCapture* videostream = 0;
 
 int initialize_video_stream(char avifile[])
 {
@@ -349,13 +355,13 @@ void uninitialize_video_stream()
 
 uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 {
-	static IplImage* gray = NULL;
+	static IplImage* gray = 0;
 	
 	IplImage* frame;
 	
 	//
 	if(!videostream)
-		return NULL;
+		return 0;
 
 	// get the frame
 	cvGrabFrame(videostream);
@@ -381,19 +387,8 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 }
 
 /*
-
+	
 */
-
-void convert_to_ascii_art(uint8_t pixels[], int nrows, int ncols, int ldim)
-{
-	CLAHE(pixels, pixels, nrows, ncols, ldim, 8, 8, 3);
-
-	do_gamma_correction(pixels, nrows, ncols, ldim, 2.0f);
-
-	CLAHE(pixels, pixels, nrows, ncols, ldim, 8, 8, 3);
-
-	convert_and_render(pixels, nrows, ncols, ldim);
-}
 
 void display_image(uint8_t pixels[], int nrows, int ncols, int ldim)
 {
@@ -419,30 +414,40 @@ int process_stream()
 {
 	int stop;
 
-    uint8_t* frame;
+	uint8_t* frame;
 	int nrows, ncols, ldim;
 
-    //
+	int useclahe;
+
+	//
+	useclahe = 0;
+
 	stop = 0;
 
 	while(!stop)
 	{
 		int key = 0;
 
-    	// get the pressed key ...
-    	key = cvWaitKey(1);
+		// get the pressed key ...
+		key = cvWaitKey(1);
 
-    	//
-    	frame = get_frame_from_video_stream(&nrows, &ncols, &ldim);
+		//
+		frame = get_frame_from_video_stream(&nrows, &ncols, &ldim);
+
+		if(key == 't')
+			useclahe = ~useclahe;
 
 		//
 		if(key=='q')
 			stop = 1;
 		else if(!frame)
-			usleep(10000);
+			return 0;
 		else
 		{
-			convert_to_ascii_art(frame, nrows, ncols, ldim);
+			if(useclahe)
+				CLAHE(frame, frame, nrows, ncols, ldim, 8, 8, 3);
+
+			transform_to_ascii(frame, &nrows, &ncols, ldim);
 
 			display_image(frame, nrows, ncols, ldim);
 		}
@@ -458,13 +463,29 @@ int process_stream()
 
 int main()
 {
-	if(!initialize_video_stream(NULL))
-		return 1;
+	// packed rendering structures
+	static uint8_t pack[]=
+	{
+		#include "8x8.array"
+	};
 
+	//
+	if(!initialize_video_stream(NULL))
+	{
+		printf("Cannot initialize camera stream!\n");
+
+		return 1;
+	}
+
+	//
+	unpack_rendering_structures(pack);
+
+	//
 	process_stream();
 
+	//
 	uninitialize_video_stream();
 
+	//
 	return 0;
 }
-
