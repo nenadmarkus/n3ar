@@ -39,7 +39,6 @@ done
 #
 
 ffmpeg -i TMP/%06d.jpg.ascii.png $2
-#ffmpeg -r $2 -i TMP/%06d.jpg.ascii.png $3
 
 #
 # clean temporary files
