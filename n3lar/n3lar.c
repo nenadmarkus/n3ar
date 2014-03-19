@@ -263,10 +263,6 @@ int get_tree_output(uint8_t* pixels, int ldim)
 	return n[1];
 }
 
-/*
-	
-*/
-
 void compute_index_matrix(uint8_t indexmatrix[], uint8_t pixels[], int nrows, int ncols, int ldim)
 {
 	int i;
@@ -292,20 +288,20 @@ void compute_index_matrix(uint8_t indexmatrix[], uint8_t pixels[], int nrows, in
 	}
 }
 
-/*
-	
-*/
-
 void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
 {
 	static uint8_t indexmatrix[640*480];
 
 	int r, c;
 
+	int n;
+
 	//
 	compute_index_matrix(indexmatrix, pixels, *nrows, *ncols, ldim);
 
 	//
+	n = 0;
+
 	for(r=0; r<*nrows; r+=glyphnrows)
 		for(c=0; c<*ncols; c+=glyphncols)
 		{
@@ -313,7 +309,9 @@ void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
 			uint8_t* glyph;
 
 			//
-			idx = indexmatrix[(r/glyphnrows)*(*ncols/glyphncols) + (c/glyphncols)];
+			idx = indexmatrix[ n ];
+
+			++n;
 
 			//
 			glyph = (uint8_t*)&glyphs[idx][0];
@@ -326,6 +324,104 @@ void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
 	//
 	*nrows = (*nrows/glyphnrows)*glyphnrows;
 	*ncols = (*ncols/glyphncols)*glyphncols;
+}
+
+/*
+	
+*/
+
+void display_image(uint8_t pixels[], int nrows, int ncols, int ldim)
+{
+	IplImage* header;
+
+	//
+	header = cvCreateImageHeader(cvSize(ncols, nrows), IPL_DEPTH_8U, 1);
+
+	header->height = nrows;
+	header->width = ncols;
+	header->widthStep = ldim;
+
+	header->imageData = (char*)pixels;
+
+	//
+	cvShowImage("n3lar", header);
+
+	//
+	cvReleaseImageHeader(&header);
+}
+
+/*
+	
+*/
+
+uint8_t* load_image_from_file(char path[], int* nrows, int* ncols, int* ldim)
+{
+	/*
+		Yes, I am aware that this function produces a memory leak.
+	*/
+
+	//
+	IplImage* img;
+
+	//
+	img = cvLoadImage(path, CV_LOAD_IMAGE_GRAYSCALE);
+
+	if(!img)
+		return 0;
+
+	//
+	*nrows = img->height;
+	*ncols = img->width;
+	*ldim = img->widthStep;
+
+	return (uint8_t*)img->imageData;
+}
+
+int save_image_to_file(char path[], uint8_t pixels[], int nrows, int ncols, int ldim)
+{
+	IplImage* header;
+
+	//
+	header = cvCreateImageHeader(cvSize(ncols, nrows), IPL_DEPTH_8U, 1);
+
+	header->height = nrows;
+	header->width = ncols;
+	header->widthStep = ldim;
+
+	header->imageData = (char*)pixels;
+
+	//
+	cvSaveImage(path, header, 0);
+
+	//
+	cvReleaseImageHeader(&header);
+
+	//
+	return 1;
+}
+
+int process_image(char src[], char dst[])
+{
+	uint8_t* pixels;
+	int nrows, ncols, ldim;
+
+	//
+	pixels = load_image_from_file(src, &nrows, &ncols, &ldim);
+
+	if(!pixels)
+		return 0;
+
+	//
+	CLAHE(pixels, pixels, nrows, ncols, ldim, 8, 8, 3);
+
+	transform_to_ascii(pixels, &nrows, &ncols, ldim);
+
+	//
+	if(!save_image_to_file(dst, pixels, nrows, ncols, ldim))
+		return 0;
+
+	//
+	return 1;
 }
 
 /*
@@ -375,7 +471,7 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 
 	cvCvtColor(frame, gray, CV_RGB2GRAY);
 
-	cvFlip(gray, gray, 1);
+	//cvFlip(gray, gray, 1);
 	
 	// extract relevant data
 	*nrows = gray->height;
@@ -385,31 +481,7 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 	return (uint8_t*)gray->imageData;
 }
 
-/*
-	
-*/
-
-void display_image(uint8_t pixels[], int nrows, int ncols, int ldim)
-{
-	IplImage* header;
-
-	//
-	header = cvCreateImageHeader(cvSize(ncols, nrows), IPL_DEPTH_8U, 1);
-
-	header->height = nrows;
-	header->width = ncols;
-	header->widthStep = ldim;
-
-	header->imageData = (char*)pixels;
-
-	//
-	cvShowImage("n3lar", header);
-
-	//
-	cvReleaseImageHeader(&header);
-}
-
-int process_stream()
+int process_video_stream(char avifile[])
 {
 	int stop;
 
@@ -417,6 +489,14 @@ int process_stream()
 	int nrows, ncols, ldim;
 
 	int useclahe;
+
+	//
+	if(!initialize_video_stream(avifile))
+	{
+		printf("Cannot initialize video stream!\n");
+
+		return 0;
+	}
 
 	//
 	useclahe = 0;
@@ -453,6 +533,9 @@ int process_stream()
 	}
 
 	//
+	uninitialize_video_stream();
+
+	//
 	return 1;
 }
 
@@ -460,7 +543,7 @@ int process_stream()
 	
 */
 
-int main()
+int main(int argc, char* argv[])
 {
 	// packed rendering structures
 	static uint8_t pack[]=
@@ -469,21 +552,17 @@ int main()
 	};
 
 	//
-	if(!initialize_video_stream(0))
-	{
-		printf("Cannot initialize camera stream!\n");
-
-		return 1;
-	}
-
-	//
 	unpack_rendering_structures(pack);
 
 	//
-	process_stream();
-
-	//
-	uninitialize_video_stream();
+	if(argc == 1)
+		process_video_stream(0);
+	else if(argc == 2)
+		process_video_stream(argv[1]);
+	else if(argc == 3)
+		process_image(argv[1], argv[2]);
+	else
+		return 0;
 
 	//
 	return 0;
