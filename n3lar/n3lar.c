@@ -463,7 +463,7 @@ uint8_t* get_frame_from_video_stream(int* nrows, int* ncols, int* ldim)
 	frame = cvRetrieveFrame(videostream, CV_LOAD_IMAGE_GRAYSCALE);
 	
 	if(!frame)
-		return NULL;
+		return 0;
 	
 	// convert to grayscale
 	if(!gray)
