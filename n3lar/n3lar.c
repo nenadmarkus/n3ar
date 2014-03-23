@@ -428,6 +428,75 @@ int process_image(char src[], char dst[])
 	
 */
 
+void view_in_ascii(char src[])
+{
+	int stop;
+
+	uint8_t* pixels;
+	int nrows, ncols, ldim;
+
+	uint8_t* tmppixels;
+
+	int useclahe = 0;
+
+	//
+	pixels = load_image_from_file(src, &nrows, &ncols, &ldim);
+
+	if(!pixels)
+		return;
+
+	//
+	tmppixels = (uint8_t*)malloc(nrows*ldim*sizeof(uint8_t));
+
+	//
+	stop = 0;
+
+	while(!stop)
+	{
+		int key;
+
+		// get the pressed key ...
+		key = cvWaitKey(5);
+
+		//
+		memcpy(tmppixels, pixels, nrows*ldim*sizeof(uint8_t));
+
+		//
+		if(key == 't')
+			useclahe = ~useclahe;
+
+		//
+		if(key=='q')
+			stop = 1;
+		else
+		{
+			int r, c, _nrows, _ncols;
+
+			//
+			r = rand()%( 3 );
+			c = rand()%( 3 );
+
+			_nrows = nrows - glyphnrows - 1;
+			_ncols = ncols - glyphncols - 1;
+
+			//	
+			if(useclahe)
+				CLAHE(tmppixels, tmppixels, nrows, ncols, ldim, 8, 8, 3);
+
+			transform_to_ascii(&tmppixels[r*ldim+c], &_nrows, &_ncols, ldim);
+
+			display_image(&tmppixels[r*ldim+c], _nrows, _ncols, ldim);
+		}
+	}
+
+	//
+	free(tmppixels);
+}
+
+/*
+	
+*/
+
 static CvCapture* videostream = 0;
 
 int initialize_video_stream(char avifile[])
@@ -558,7 +627,8 @@ int main(int argc, char* argv[])
 	if(argc == 1)
 		process_video_stream(0);
 	else if(argc == 2)
-		process_video_stream(argv[1]);
+		view_in_ascii(argv[1]);
+		//process_video_stream(argv[1]);
 	else if(argc == 3)
 		process_image(argv[1], argv[2]);
 	else

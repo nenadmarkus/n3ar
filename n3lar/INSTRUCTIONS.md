@@ -27,13 +27,16 @@ Contrast enhancing preprocessing step can be toggled by pressing `t`. It is base
 
 To terminate the execution of the program, press `q`.
 
-### AVI file
-Run the program with a path to an AVI file as a command line argument.
+### View image in ASCII
+Run the program with a path to an image as a command line argument.
+The program will load the image from the specified path and render it in ASCII with dithering techniques to improve reults.
 
-    $ ./n3lar path-to-video.avi
+    $ ./n3lar image.jpg
 
-### Image
-Run the program by passing the paths to the input image and output images. The program will load the input image, transform it to ASCII and save it to the specified output path.
+Contrast enhancing preprocessing step can be toggled with `t`.
+
+### Output ASCII image to file
+Run the program by passing the paths to the input image and the output. The program will load the input image, transform it to ASCII and save it to the specified output path.
 
     $ ./n3lar input.jpg output.png
 
