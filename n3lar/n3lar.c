@@ -297,6 +297,10 @@ void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
 	int n;
 
 	//
+	*nrows = (*nrows/glyphnrows)*glyphnrows;
+	*ncols = (*ncols/glyphncols)*glyphncols;
+
+	//
 	compute_index_matrix(indexmatrix, pixels, *nrows, *ncols, ldim);
 
 	//
@@ -320,10 +324,6 @@ void transform_to_ascii(uint8_t pixels[], int* nrows, int* ncols, int ldim)
 				for(j=0; j<glyphncols; ++j)
 					pixels[(r+i)*ldim+(c+j)] = glyph[i*glyphncols+j];
 		}
-
-	//
-	*nrows = (*nrows/glyphnrows)*glyphnrows;
-	*ncols = (*ncols/glyphncols)*glyphncols;
 }
 
 /*
