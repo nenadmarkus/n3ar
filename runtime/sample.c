@@ -4,6 +4,22 @@
 #include <cv.h>
 #include <highgui.h>
 
+#include "n3ar.c"
+
+/*
+	rendering structures
+*/
+
+//
+int glyphnum = 0;
+uint8_t* glyphs[256];
+
+int glyphnrows = 0;
+int glyphncols = 0;
+
+//
+int32_t* tree = 0;
+
 /*
 	
 */
@@ -195,73 +211,8 @@ void CLAHE(uint8_t out[], uint8_t in[], int nrows, int ncols, int ldim, int di, 
 }
 
 /*
-	rendering structures
-*/
-
-//
-int glyphnum = 0;
-uint8_t glyphs[1024][15*15];
-
-int glyphnrows = 0;
-int glyphncols = 0;
-
-//
-int32_t* tree = 0;
-
-//
-int unpack_rendering_structures(uint8_t pack[])
-{
-	int i, j, k;
-
-	//
-	glyphnum = *(int*)&pack[0*sizeof(int)];
-
-	glyphnrows = *(int*)&pack[1*sizeof(int)];
-	glyphncols = *(int*)&pack[2*sizeof(int)];
-
-	k = 3*sizeof(int);
-
-	for(i=0; i<glyphnum; ++i)
-		for(j=0; j<glyphnrows*glyphncols; ++j)
-		{
-			glyphs[i][j] = pack[k];
-
-			++k;
-		}
-
-	//
-	tree = (int32_t*)&pack[k];
-}
-
-/*
 	
 */
-
-#define BINTEST(r, c, t, pixels, ldim) ( (pixels)[(r)*(ldim)+(c)] > (t) )
-
-int get_tree_output(uint8_t* pixels, int ldim)
-{
-	int nodeidx;
-	uint8_t* n;
-
-	//
-	nodeidx = 0;
-	n = (uint8_t*)&tree[1];
-	
-	while(n[0] == 1) // while we are at a nonterminal node
-	{
-		//
-		if( 0==BINTEST(n[1], n[2], n[3], pixels, ldim) )
-			nodeidx = 2*nodeidx+1;
-		else
-			nodeidx = 2*nodeidx+2;
-		
-		//
-		n = (uint8_t*)&tree[1+nodeidx];
-	}
-	
-	return n[1];
-}
 
 void compute_index_matrix(uint8_t indexmatrix[], uint8_t pixels[], int nrows, int ncols, int ldim)
 {
@@ -278,7 +229,7 @@ void compute_index_matrix(uint8_t indexmatrix[], uint8_t pixels[], int nrows, in
 		{
 			//
 			if(tree)
-				indexmatrix[i] = get_tree_output(&pixels[r*ldim+c], ldim);
+				indexmatrix[i] = get_tree_output(tree, &pixels[r*ldim+c], ldim);
 			else
 				indexmatrix[i] = 0;
 
@@ -621,7 +572,7 @@ int main(int argc, char* argv[])
 	};
 
 	//
-	unpack_rendering_structures(pack);
+	unpack_rendering_structures(glyphs, &glyphnum, &glyphnrows, &glyphncols, &tree, pack);
 
 	//
 	if(argc == 1)

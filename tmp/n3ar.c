@@ -601,7 +601,7 @@ uint8_t* get_frame_over_ip(int* nrows, int* ncols, int* ldim)
 	memset(flags, 0, PACKETS_PER_FRAME*sizeof(int));
 	
 	stop = 0;
-	
+
 	while(!stop)
 	{
 		int id;
