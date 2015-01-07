@@ -10,7 +10,7 @@ Approximately 200 five Mpixel images will do.
 
 * Download a file from <https://googledrive.com/host/0Bw4IT5ZOzJj6NXlJUFh0UGZCWmc>
 * Rename `0Bw4IT5ZOzJj6NXlJUFh0UGZCWmc` to `images.tar`
-* Extract the contents to some folder: `path/to/images`
+* Extract the contents to some folder: `patdh/to/images`
 
 ## 3. Generate the training set
 
@@ -22,7 +22,7 @@ If everything went well, you should find a file `dataset` in the folder.
 
 ## 4. Start the learning process
 
-We will learn a tree of depth equal to 12 with the following command:
+Learn a tree of depth equal to 12 with the following command:
 
 	$ ./tlrn dataset 12 tree
 
