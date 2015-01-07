@@ -568,7 +568,7 @@ int main(int argc, char* argv[])
 	// packed rendering structures
 	static uint8_t pack[]=
 	{
-		#include "8x8.array"
+		#include "rstruct.array"
 	};
 
 	//

@@ -9,7 +9,7 @@
 	
 */
 
-#define NRANDS 1024
+#define NRANDS 256
 
 /*
 	portable time function
@@ -473,7 +473,10 @@ int main(int argc, char* argv[])
 
 	//
 	if(argc != 4)
+	{
+		printf("* specify arguments: training data, tree depth, output file name\n");
 		return 0;
+	}
 
 	// initialize PRNG
 	smwcrand(time(0));

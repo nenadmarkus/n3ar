@@ -1,5 +1,5 @@
 /*
-	HOWTO: cat list.txt | ./dgen 8x8 out
+	HOWTO: ls path/to/images/* | ./dgen 8x8 data
 */
 
 /*
