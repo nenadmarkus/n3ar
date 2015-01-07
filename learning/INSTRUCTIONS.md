@@ -14,7 +14,8 @@ Approximately 200 five Mpixel images will do.
 
 ## 3. Generate the training set
 
-Use the following command:
+We use a codebook which consists of 8x8 pixel printable ASCII characters (the file `codebook`).
+Use the following command to generate the training set with the SSIM mapping:
 
 	$ ls path/to/images/* | ./dgen codebook dataset
 
